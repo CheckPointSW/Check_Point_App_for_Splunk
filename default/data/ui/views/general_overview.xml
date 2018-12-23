@@ -1,0 +1,279 @@
+<form stylesheet="general_overview.css">
+  <label>General Overview</label>
+  <fieldset autoRun="true" submitButton="true">
+    <input type="multiselect" searchWhenChanged="false" token="indices">
+      <label>Indices</label>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <delimiter>,</delimiter>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search>
+        <query>|rest /services/data/indexes | table title</query>
+        <earliest>1536526800</earliest>
+        <latest>1537131600</latest>
+      </search>
+      <initialValue>main</initialValue>
+    </input>
+    <input type="time" searchWhenChanged="false" token="general_overview_time_picker">
+      <label></label>
+      <default>
+        <earliest>1536526800</earliest>
+        <latest>1537045200</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row id="first_row">
+    <panel id="indicators_panel">
+      <title>Statistics</title>
+      <single>
+        <title>Gateways and Servers</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" | dedup 1 loguid | eval "Gateway/Server"=origin | stats count as Logs by "Gateway/Server" | sort -Logs | stats count as "Logs"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <option name="underLabel">Reported these events</option>
+      </single>
+      <single id="published_sessions">
+        <title>Published Sessions</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" operation=publish | dedup 1 loguid | eval "Session ID"=session_uid| stats count as Logs by "Session ID" | sort -Logs  | stats count as "Logs"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <option name="underLabel">Applied by administrators</option>
+        <drilldown>
+          <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" operation=publish | dedup 1 loguid | eval "Session Name"=session_name| stats count as Logs by "Session Name" | sort -Logs&amp;earliest=$general_overview_time_picker.earliest$&amp;latest=$general_overview_time_picker.latest$</link>
+        </drilldown>
+      </single>
+      <single id="critical_attack_types">
+        <title>Critical Attack Types</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN (Anti-Bot, Anti-Virus, "DDoS Protector", IPS, "Threat Emulation") AND severity IN (High, Critical) AND confidence_level IN (Medium-High, High) AND action="Detect" | dedup 1 protection_name | timechart span=1d count</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <option name="underLabel">Not prevented by policy</option>
+        <option name="useColors">1</option>
+      </single>
+      <single id="infected_hosts">
+        <title>Infected Hosts</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product=Anti-Bot AND severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High) AND protection_type IN ("DNS Reputation","URL Reputation","IP Reputation") | fields src,loguid,_time,suppressed_logs,malware_family | dedup 1 src | timechart span=1d count</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row id="second_row">
+    <panel id="second_row_left_col">
+      <title>Software Blades</title>
+      <table id="software_blades">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" | dedup 1 loguid | eval Blades=product | stats count as Logs by Blades | table "Blades","Logs" | sort by -"Logs"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="rowNumbers">false</option>
+        <option name="wrap">true</option>
+        <format type="number" field="Logs">
+          <option name="precision">0</option>
+        </format>
+        <drilldown>
+          <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" | dedup 1 loguid  | eval Blades=product | stats count as Logs by Blades | search Blades="$row.Blades$"&amp;earliest=$general_overview_time_picker.earliest$&amp;latest=$general_overview_time_picker.latest$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel id="second_row_mid_col">
+      <title>Attack Actions by Policy</title>
+      <chart id="attack_prevention_by_policy">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN (Anti-Bot, Anti-Virus, "DDoS Protector", IPS, "Threat Emulation") AND confidence_level IN (Medium, Medium-High, High) AND severity IN (Medium, High, Critical) AND action IN (Detect, Prevent) | dedup 1 loguid | eval "Protection Name"=protection_name, Action=action | stats count as Logs by "Protection Name",Action | stats count as Logs by Action | sort - Logs</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.fieldColors">{"Prevent":#6FA0F9, "Detect": #FFE614}</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+      </chart>
+    </panel>
+    <panel id="second_row_right_col">
+      <title>Critical Attacks Allowed by Policy</title>
+      <table id="critical_attacks_allowed_by_policy">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN (Anti-Bot, Anti-Virus, "DDoS Protector", IPS, "Threat Emulation") AND confidence_level IN (Medium-High, High) AND severity IN (High, Critical) AND action="Detect" | dedup 1 loguid | eval "Attack"=protection_name, "Severity"=severity, "Blade"=product, "Logs"=count | stats count as Logs by Attack, Severity, Blade | eval severity_order=case(Severity=="Informational",0, Severity=="Low",1, Severity=="Medium",2, Severity=="High",3, Severity=="Critical",4) | sort by -severity_order -"Logs"  | fields - severity_order | table "Attack", "Severity", "Blade", "Logs"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="refresh.display">progressbar</option>
+        <format type="number" field="Logs">
+          <option name="precision">0</option>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row id="third_row">
+    <panel id="third_row_left_col">
+      <title>Applications and URL Filtering by Risk</title>
+      <chart id="applications_and_url_filtering_by_logs">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN ("Application Control", "URL Filtering") | dedup 1 loguid | bucket _time span=1d
+| stats count as "Logs" by _time, app_risk
+| eval risk_order=case(app_risk=="Unknown",0, app_risk=="Very Low",1,app_risk=="Low",2, app_risk=="Medium",3,app_risk=="High",4, app_risk=="Critical",5)
+| sort -risk_order
+| xyseries _time, risk_order,Logs
+| rename "0" as "Unknown" "1" as "Very Low" "2" as "Low" "3" as "Medium" "4" as "High" "5" as "Critical"
+| table _time,"Critical","High","Medium","Low","Very Low","Unknown"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Logs</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisY.abbreviation">auto</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labels">[Critical,High,Medium,Low,"Very Low",Unknown]</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">[#E55D5D,#FF8B1A,#FFE614,#89C73A,#6FA0F9,#A6A6A6]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <drilldown>
+          <condition match="isnull($click.value$)">
+            <link target="_self"></link>
+          </condition>
+          <condition match="isnotnull($click.value$)">
+            <set token="clicked_earliest_date">$earliest$</set>
+            <eval token="clicked_latest_date">$clicked_earliest_date$+86400</eval>
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND product IN ("Application Control", "URL Filtering") | dedup 1 loguid | search app_risk="$click.name2$"&amp;earliest=$clicked_earliest_date$&amp;latest=$clicked_latest_date$</link>
+          </condition>
+        </drilldown>
+      </chart>
+    </panel>
+    <panel id="third_row_right_col">
+      <title>Allowed High Risk Applications</title>
+      <chart id="allowed_high_risk_applications">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN ("Application Control", "URL Filtering") AND action IN (Accept, Allow) AND app_risk IN (High, Critical) | dedup 1 loguid
+| stats count by appi_name app_risk
+| eval risk_order=case(app_risk=="High",0, app_risk=="Critical",1)
+| sort 10 -risk_order -count
+| streamstats count as sno
+| eval appi_name=printf("%02d",sno).appi_name
+| fields - sno
+| xyseries appi_name risk_order count
+| fields - risk_order
+| rename "0" as "High" "1" as "Critical" 
+| eval "Application Name"=substr(appi_name,3)
+| fields - appi_name</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsY.majorUnit">1</option>
+        <option name="charting.axisTitleX.text">Application Name</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Logs</option>
+        <option name="charting.axisY.abbreviation">auto</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.labels">[Critical,High]</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">[#E55D5D,#FF8B1A]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <option name="height">300</option>
+        <drilldown>
+          <condition match="isnull($click.value$)">
+            <link target="_self"></link>
+          </condition>
+          <condition match="isnotnull($click.value$)">
+            <set token="clicked_earliest_date">$earliest$</set>
+            <eval token="clicked_latest_date">$clicked_earliest_date$+86400</eval>
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND product IN ("Application Control", "URL Filtering") AND action IN (Accept, Allow) AND app_risk IN (High, Critical) | dedup 1 loguid | eval "Application Name"=appi_name, "Application Risk"=app_risk | search "Application Name"="$click.value$" | stats count as Logs by "Application Name" "Application Risk"| eval risk_order=case("Application Risk"=="High",0, "Application Risk"=="Critical",1)| sort 10 -risk_order -Logs| streamstats count as sno| fields - sno - risk_order&amp;earliest=$general_overview_time_picker.earliest$&amp;latest=$general_overview_time_picker.latest$</link>
+          </condition>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+  <row id="forth_row">
+    <panel>
+      <title>Security Incidents by Severity</title>
+      <chart id="security_incidents_by_logs">
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND severity IN (High, Critical) | dedup 1 loguid | eval Severity=severity | bucket _time span=1d  | stats count as "Logs" by _time, Severity | eval severity_order=case(Severity=="High",0, Severity=="Critical",1) | sort -severity_order | xyseries _time,severity_order,Logs | rename "0" as "High" "1" as "Critical" | table _time,"Critical","High"</query>
+          <earliest>$general_overview_time_picker.earliest$</earliest>
+          <latest>$general_overview_time_picker.latest$</latest>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Logs</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Logs</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisY.abbreviation">auto</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labels">[Critical,High]</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">[#E55D5D,#FF8B1A]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">small</option>
+        <drilldown>
+          <condition match="isnull($click.value$)">
+            <link target="_self"></link>
+          </condition>
+          <condition match="isnotnull($click.value$)">
+            <set token="clicked_earliest_date">$earliest$</set>
+            <eval token="clicked_latest_date">$clicked_earliest_date$+86400</eval>
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND severity IN (High, Critical) | dedup 1 loguid | eval Severity=severity | bucket _time span=1d  | stats count as "Logs" by _time, Severity | eval severity_order=case(Severity=="High",0, Severity=="Critical",1) | sort -severity_order | xyseries _time,severity_order,Logs | rename "0" as "High" "1" as "Critical" | table _time,"Critical","High"&amp;earliest=$clicked_earliest_date$&amp;latest=$clicked_latest_date$</link>
+          </condition>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+</form>

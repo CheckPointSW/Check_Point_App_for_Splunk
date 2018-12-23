@@ -1,0 +1,9 @@
+<nav search_view="search" color="#171F2C">
+  <view name="general_overview" label="General Overview"/>
+    <collection label="Threat Prevention Protection">
+      <view name="cyber_attack_view" label="Cyber Attack Overview"/>
+      <view name="malicious_files" label="SandBlast Protection"/>
+      <view name="additional_events" label="Additional Threat Prevention Events"/>
+    </collection>
+  <view name="search" label="Search"/>
+</nav>

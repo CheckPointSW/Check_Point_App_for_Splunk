@@ -1,0 +1,54 @@
+<form stylesheet="sandblast.css">
+  <label>SandBlast Protection</label>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="multiselect" token="indices" searchWhenChanged="false">
+      <label>Indices</label>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <delimiter>,</delimiter>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search>
+        <query>|rest /services/data/indexes | table title</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <initialValue>main</initialValue>
+    </input>
+    <input type="time" token="access_view_time_picker" searchWhenChanged="false">
+      <label></label>
+      <default>
+        <earliest>1536526800</earliest>
+        <latest>1537131600</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row id="first_row">
+    <panel id="malicious_email">
+      <title>Malicious Files Received by Emails</title>
+      <table>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND (product="Threat Emulation" OR (product="Anti-Virus" AND protection_type=protection)) AND severity IN (Medium,High,Critical) AND confidence_level IN (Medium,Medium-High,High) service=25 | dedup 1 loguid | eval Time=strftime(_time,"%m/%d/%y %H:%M:%S"), Sender=sender, Recipient=recipient, Blade=product, Action=action, Subject=subject, "File Name"=file_name, "File Type"=file_type, "File Size"=tostring(file_size,"commas"), "File Hash"=file_hash, Severity=severity, "Confidence Level"=confidence_level | table Time,Blade,Action,Sender,Recipient,Subject,"File Name","File Type","File Size","File Hash",Severity,"Confidence Level"</query>
+          <earliest>$access_view_time_picker.earliest$</earliest>
+          <latest>$access_view_time_picker.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row id="second_row">
+    <panel id="malicious_web">
+      <title>Malicious Files Downloaded from Web</title>
+      <table>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND (product="Threat Emulation" OR (product="Anti-Virus" AND protection_type=protection)) AND severity IN (Medium,High,Critical) AND confidence_level IN (Medium,Medium-High,High) service=80 | dedup 1 loguid | eval Time=strftime(_time,"%m/%d/%y %H:%M:%S"), Source=src, Destination=dst, Blade=product, Action=action, Resource=resource, "File Name"=file_name, "File Type"=file_type, "File Size"=tostring(file_size,"commas"), "File Hash"=file_hash, Severity=severity, "Confidence Level"=confidence_level | table Time,Blade,Action,Source,Destination,Resource,"File Name","File Type","File Size","File Hash",Severity,"Confidence Level"</query>
+          <earliest>$access_view_time_picker.earliest$</earliest>
+          <latest>$access_view_time_picker.latest$</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>

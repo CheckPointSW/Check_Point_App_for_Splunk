@@ -1,0 +1,254 @@
+<form stylesheet="cyber_attack_view.css">
+  <label>Cyber Attack Overview</label>
+  <description>This dashboard presents the most important Cyber Attacks on your network based on the Cyber Kill Chain.</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="multiselect" token="indices" searchWhenChanged="false">
+      <label>Indices</label>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <delimiter>,</delimiter>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search>
+        <query>|rest /services/data/indexes | table title</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <initialValue>main</initialValue>
+    </input>
+    <input type="time" token="cyber_attack_view_time_picker" searchWhenChanged="false">
+      <label></label>
+      <default>
+        <earliest>1536526800</earliest>
+        <latest>1537131600</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row id="first_row">
+    <panel id="first_row_left_col">
+      <title>Infected Hosts</title>
+      <single>
+        <title>Trend</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product=Anti-Bot AND severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High) AND protection_type IN ("DNS Reputation","URL Reputation","IP Reputation") | fields src,loguid,_time,suppressed_logs,malware_family | dedup 1 src | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="showSparkline">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <table>
+        <title>Total</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product=Anti-Bot AND severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High) AND protection_type IN ("DNS Reputation","URL Reputation","IP Reputation") | dedup 1 loguid | eval "Source"=src, "Malware Family"=malware_family | fields Source,loguid,_time,suppressed_logs,"Malware Family" | stats  count as Logs by Source, "Malware Family" | sort by -"Logs" | table "Source","Malware Family","Logs"</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="count">5</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="number" field="Logs">
+          <option name="precision">0</option>
+        </format>
+      </table>
+    </panel>
+    <panel id="first_row_right_col">
+      <title>Kill Chain</title>
+      <single>
+        <title>Hosts Scanned by Attackers</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dest | bucket _time span=1d | stats count by _time,dest | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Users Received Malicious Emails</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | bucket _time span=1d | stats count by _time,recipient | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Hosts Downloaded Malicious Files</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | bucket _time span=1d | stats count by _time,src  | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Hosts Accessed Malicious Websites</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | bucket _time span=1d | stats count by _time,src | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <single>
+        <title>Directly Targeted Hosts</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | bucket _time span=1d | stats count by _time,dst | timechart span=1d count</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.size">large</option>
+        <option name="trendInterval">-1d</option>
+        <option name="underLabel">Compared to previous day</option>
+        <option name="useColors">1</option>
+      </single>
+      <table>
+        <title>Total Actions Based on Threat Prevention Policy Configuration</title>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dst | stats count by action, dst | fields action | stats count(eval(action="Detect")) as "Detect", count(eval(action!="Detect")) as "Prevent" | append [search index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | stats count by action, recipient | fields action |  stats count(eval(action="Detect")) as "Detect", count(eval(action!="Detect")) as "Prevent"] | append [search index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | stats count by action, src | fields action | stats count(eval(action="Detect")) as "Detect", count(eval(action!="Detect")) as "Prevent"] | append [search index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | stats count by action, src | fields action | stats count(eval(action="Detect")) as "Detect", count(eval(action!="Detect")) as "Prevent"] | append [search index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | stats count by action, dst | fields action | stats count(eval(action="Detect")) as "Detect", count(eval(action!="Detect")) as "Prevent"] | transpose | rename column as "Action" | rename "row 1" as "Hosts Scanned by Attackers" | rename "row 2" as "Users Received Malicious Emails" | rename "row 3" as "Hosts Downloaded Malicious Files" | rename "row 4" as "Hosts Accessed Malicious Websites" | rename "row 5" as "Directly Targeted Hosts"</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="drilldown">cell</option>
+        <option name="totalsRow">false</option>
+        <format type="number" field="Hosts Scanned by Attackers">
+          <option name="precision">0</option>
+        </format>
+        <format type="number" field="Users Received Malicious Emails">
+          <option name="precision">0</option>
+        </format>
+        <format type="number" field="Hosts Downloaded Malicious Files">
+          <option name="precision">0</option>
+        </format>
+        <format type="number" field="Hosts Accessed Malicious Websites">
+          <option name="precision">0</option>
+        </format>
+        <format type="number" field="Directly Targeted Hosts">
+          <option name="precision">0</option>
+        </format>
+        <drilldown>
+          <!--Detect-->
+          <condition match="$click.name2$ == &quot;Hosts Scanned by Attackers&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dst | search action="$click.value$" | stats count by action, dst | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Scanned by Attackers"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Users Received Malicious Emails&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | search action="$click.value$" | stats count by action, recipient | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Users Received Malicious Emails"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Hosts Downloaded Malicious Files&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | search action="$click.value$" | stats count by action, src | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Downloaded Malicious Files"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Hosts Accessed Malicious Websites&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | search action="$click.value$" | stats count by action, src | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Accessed Malicious Websites"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Directly Targeted Hosts&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | search action="$click.value$" | stats count by action, dst | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Directly Targeted Hosts"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name$ == &quot;Action&quot; AND $click.value$ == &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dst | search action="$click.value$" | stats count by action, dst | fields action | stats count(eval(action="$click.value$")) as "$click.value$" | append [search index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | search action="$click.value$" | stats count by action, recipient | fields action |  stats count(eval(action="$click.value$")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | search action="$click.value$" | stats count by action, src | fields action | stats count(eval(action="$click.value$")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | search action="$click.value$" | stats count by action, src | fields action | stats count(eval(action="$click.value$")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | search action="$click.value$" | stats count by action, dst | fields action | stats count(eval(action="$click.value$")) as "$click.value$"] | transpose | rename column as "Action" | rename "row 1" as "Hosts Scanned by Attackers" | rename "row 2" as "Users Received Malicious Emails" | rename "row 3" as "Hosts Downloaded Malicious Files" | rename "row 4" as "Hosts Accessed Malicious Websites"| rename "row 5" as "Directly Targeted Hosts"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <!--End of Detect-->
+          <!--Prevent-->
+          <condition match="$click.name2$ == &quot;Hosts Scanned by Attackers&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dst | search action!="Detect" | stats count by action, dst | fields action | stats count(eval(action!="Detect")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Scanned by Attackers"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Users Received Malicious Emails&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | search action!="Detect" | stats count by action, recipient | fields action | stats count(eval(action!="Detect")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Users Received Malicious Emails"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Hosts Downloaded Malicious Files&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | search action!="Detect" | stats count by action, src | fields action | stats count(eval(action!="Detect")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Downloaded Malicious Files"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Hosts Accessed Malicious Websites&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | search action!="Detect" | stats count by action, src | fields action | stats count(eval(action!="Detect")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Hosts Accessed Malicious Websites"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name2$ == &quot;Directly Targeted Hosts&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | search action!="Detect" | stats count by action, dst | fields action | stats count(eval(action!="Detect")) as "$click.value$" | transpose | rename column as "Action" "row 1" as "Directly Targeted Hosts"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <condition match="$click.name$ == &quot;Action&quot; AND $click.value$ != &quot;Detect&quot;">
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND attack IN ("Scanner Enforcement Violation","Novell NMAP Protocol Violation","Port Scan","Muieblackcat PHP Scanner") | dedup 1 loguid | dedup 1 dst | search action!="Detect" | stats count by action, dst | fields action | stats count(eval(action!="Detect")) as "$click.value$" | append [search index IN $indices$ sourcetype="cp_log" AND ((product="IPS" AND attack IN ("Adobe Reader Violation","Content Protection Violation","Mail Content Protection Violation","SMTP Protection Violation","Phishing Enforcement Protection","Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Anti-Virus" AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Extraction" AND content_risk IN (Medium, High, Critical))) AND service IN (25, 110, 143) | dedup 1 loguid | dedup 1 recipient | search action!="Detect" | stats count by action, recipient | fields action |  stats count(eval(action!="Detect")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND confidence_level IN (Medium, Medium-High, High) AND ((product="Threat Emulation") OR (product="Anti-Virus" AND protection_type IN (signature,protection)) OR (product=IPS  AND (attack IN ("Adobe Reader Violation","Content Protection Violation","GIF Content Protection Violation","Instant Messenger","Adobe Flash Protection Violation")))) AND NOT service IN (25,465,587,2525) | dedup 1 loguid | dedup 1 src | search action!="Detect" | stats count by action, src | fields action | stats count(eval(action!="Detect")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product="IPS"  AND attack IN ("Adobe Flash Protection Violation","Adobe Shockwave Protection Violation","Web Client Enforcement Violation","Exploit Kit")) OR (product=Anti-Virus AND protection_type IN ("URL Reputation","DNS Reputation")))) | dedup 1 loguid | dedup 1 src | search action!="Detect" | stats count by action, src | fields action | stats count(eval(action!="Detect")) as "$click.value$"] | append [search index IN $indices$ sourcetype="cp_log" AND product="IPS" AND confidence_level IN (Medium, Medium-High, High) AND attack IN ("DCE-RPC Enforcement Violation","Malformed HTTP","LDAP Protections","Microsoft WINS Protection Violation","MSRPC Enforcement Violation","Ping of Death","RDP Buffer Overflow","VoIP Enforcement","Proxy Server Enforcement","Application Intelligence","SCADA Protection Violation","IMAP Protocol Violation","Tunneling Detection","IKE Protection Violation","DNS Enforcement Violation","Syslog Protocol Violation","Syslog Relay Server List","SSL Protection Violation","VoIP Enforcement Violation","Web Server Enforcement Violation","Authentication Protocols Violation","MS-RPC Enforcement Violation","Remote Administrator Enforcement Violation","Security Products Enforcement Violation","SharePoint Enforcement Violation","POP3 Protocol Violation","DCOM DCE-RPC Enforcement Violation ","SSL Enforcement Violation","Adobe Products Violation","Apache Server Protection Violation","Apple QuickTime Protection Violation","CA Products Enforcement Violation","Cisco Protection Violation","Citrix ICA Protection Violation","Database Protection Violation","DHCP Protection Violation","FTP Enforcement Violation","HP Products Protection Violation","IBM Protection Violation","IBM Tivoli Enforcement Violation","ICMP Protocol Violation","LANDesk Management Suite Enforcement","LDAP Protection Violation","Media Player Enforcement Violation","Windows SMB Protection Violation","MS-RPC over CIFS Enforcement Violation","Microsoft SQL Server Protection Violation","NFS Protection Violation","NTP Enforcement Violation","OpenSSL Enforcement Violation","Oracle Protection Violation","Peer to Peer","Proxy Server Enforcement Violation","RDP Enforcement Violation","IGMP Protocol Enforcement Violation","RTSP Enforcement Violation","SNMP Protection Violation","SSH Protection Violation","SUN-RPC Enforcement Protection","TCP Enforcement Violation","Telnet Enforcement Violation","TFTP Enforcement Violation","Trend Micro ServerProtect Protection Violation","Veritas Backup Exec Protection Violation","Application Servers Protection Violation","MySQL Protection Violation","Microsoft Windows Operating System","WordPress Enforcement Protection","HTTP Protocol Inspection","RIP Enforcement Violation","SUN-RPC Enforcement Violation","Microsoft Windows NT Null CIFS Sessions") | dedup 1 loguid | dedup 1 dst | search action!="Detect" | stats count by action, dst | fields action | stats count(eval(action!="Detect")) as "$click.value$"] | transpose | rename column as "Action" | rename "row 1" as "Hosts Scanned by Attackers" | rename "row 2" as "Users Received Malicious Emails" | rename "row 3" as "Hosts Downloaded Malicious Files" | rename "row 4" as "Hosts Accessed Malicious Websites"| rename "row 5" as "Directly Targeted Hosts"&amp;earliest=$cyber_attack_view_time_picker.earliest$&amp;latest=$cyber_attack_view_time_picker.latest$</link>
+          </condition>
+          <!--End of Prevent-->
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row id="second_row">
+    <panel id="cyber_attack_trends_panel">
+      <title>Cyber Attacks</title>
+      <chart>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND product IN (Anti-Bot, Anti-Virus, IPS, "Threat Emulation") AND confidence_level IN (Medium, Medium-High, High) AND severity IN (Medium, High, Critical) | dedup 1 loguid | bucket _time span=1d | stats count by _time product | xyseries _time,product,count | table _time,"Anti-Bot","Anti-Virus","IPS","Threat Emulation"</query>
+          <earliest>$cyber_attack_view_time_picker.earliest$</earliest>
+          <latest>$cyber_attack_view_time_picker.latest$</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.text">Logs</option>
+        <option name="charting.axisY.abbreviation">auto</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.legend.labels">[Anti-Bot, Anti-Virus, IPS, "Threat Emulation"]</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="charting.seriesColors">[#3E5478,#BCDBF3,#F9A75E,#3F9B2C]</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <condition match="isnull($click.value$)">
+            <link target="_self"></link>
+          </condition>
+          <condition match="isnotnull($click.value$)">
+            <set token="clicked_earliest_date">$earliest$</set>
+            <eval token="clicked_latest_date">$clicked_earliest_date$+86400</eval>
+            <link target="_self">search?q=index IN $indices$ sourcetype="cp_log" AND product IN (Anti-Bot, Anti-Virus, IPS, "Threat Emulation") AND confidence_level IN (Medium, Medium-High, High) AND severity IN (Medium, High, Critical) | dedup 1 loguid | bucket _time span=1d | stats count by _time product | xyseries _time,product,count | table _time,"Anti-Bot","Anti-Virus","IPS","Threat Emulation"&amp;earliest=$clicked_earliest_date$&amp;latest=$clicked_latest_date$</link>
+          </condition>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+</form>

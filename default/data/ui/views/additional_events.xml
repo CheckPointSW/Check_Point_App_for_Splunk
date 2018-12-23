@@ -1,0 +1,40 @@
+<form stylesheet="additional_events.css">
+  <label>Additional Threat Prevention Events</label>
+  <description>List of low severity and low confidence Threat Prevention events.</description>
+  <fieldset submitButton="true" autoRun="true">
+    <input type="multiselect" token="indices" searchWhenChanged="false">
+      <label>Indices</label>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <delimiter>,</delimiter>
+      <fieldForLabel>title</fieldForLabel>
+      <fieldForValue>title</fieldForValue>
+      <search>
+        <query>|rest /services/data/indexes | table title</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <initialValue>main</initialValue>
+    </input>
+    <input type="time" token="access_view_time_picker" searchWhenChanged="false">
+      <label></label>
+      <default>
+        <earliest>1536526800</earliest>
+        <latest>1537131600</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row id="first_row">
+    <panel>
+      <table>
+        <search>
+          <query>index IN $indices$ sourcetype="cp_log" AND NOT ((((product=Anti-Bot AND severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High) NOT "Mail analysis") OR (product=IPS AND "Malware Traffic")) OR (product=ips AND ("LDAP Protections" OR "Microsoft WINS Protection Violation" OR "MSRPC Enforcement Violation" OR "Ping of Death" OR "VoIP Enforcement" OR "RDP Buffer Overflow" OR  "Adobe Reader Violation" OR "Application Intelligence" OR "Proxy Server Enforcement" OR "Content Protection Violation" OR "Mail Content Protection Violation" OR "SMTP Protection Violation" OR "Phishing Enforcement Protection" OR "Adobe Flash Protection Violation") AND confidence_level IN (Medium, Medium-High, High)) OR (product="Threat Emulation" AND confidence_level IN (Medium, Medium-High, High)) OR (product=Anti-Virus AND confidence_level IN (Medium, Medium-High, High))) OR (confidence_level IN (Medium, Medium-High, High) AND ((product="threat emulation") OR (product="anti-virus" AND "signature") OR (product=ips  AND (("Adobe Reader Violation" OR "Content Protection Violation" OR "Instant Messenger" OR "Adobe Flash Protection Violation")))) NOT smtp) OR (product=IPS  AND confidence_level IN (Medium, Medium-High, High) NOT SMTP AND (("DCE-RPC Enforcement Violation" OR "Malformed HTTP" OR "LDAP Protections" OR "Microsoft WINS Protection Violation" OR "MSRPC Enforcement Violation" OR "Ping of Death" OR "RDP Buffer Overflow" OR "VoIP Enforcement" OR "Proxy Server Enforcement" OR "Application Intelligence" OR "SCADA Protection Violation" OR "IMAP Protocol Violation" OR "Tunneling Detection" OR "IKE Protection Violation" OR "DNS Enforcement Violation" OR "Syslog Protocol Violation" OR "Syslog Relay Server List" OR "SSL Protection Violation" OR "VoIP Enforcement Violation" OR "Web Server Enforcement Violation" OR "Authentication Protocols Violation" OR "MS-RPC Enforcement Violation" OR "Remote Administrator Enforcement Violation" OR "Security Products Enforcement Violation" OR "SharePoint Enforcement Violation" OR "POP3 Protocol Violation" OR "DCOM DCE-RPC Enforcement Violation " OR "SSL Enforcement Violation" OR "Adobe Products Violation" OR "Apache Server Protection Violation" OR "Apple QuickTime Protection Violation" OR "CA Products Enforcement Violation" OR "Cisco Protection Violation" OR "Citrix ICA Protection Violation" OR "Database Protection Violation" OR "DHCP Protection Violation" OR "FTP Enforcement Violation" OR "HP Products Protection Violation" OR "IBM Protection Violation" OR "IBM Tivoli Enforcement Violation" OR "ICMP Protocol Violation" OR "LANDesk Management Suite Enforcement" OR "LDAP Protection Violation" OR "Media Player Enforcement Violation" OR "Windows SMB Protection Violation" OR "MS-RPC over CIFS Enforcement Violation" OR "Microsoft SQL Server Protection Violation" OR "NFS Protection Violation" OR "NTP Enforcement Violation" OR "OpenSSL Enforcement Violation" OR "Oracle Protection Violation" OR "Peer to Peer" OR "Proxy Server Enforcement Violation" OR "RDP Enforcement Violation" OR "IGMP Protocol Enforcement Violation" OR "RTSP Enforcement Violation" OR "SNMP Protection Violation" OR "SSH Protection Violation" OR "SUN-RPC Enforcement Protection" OR "TCP Enforcement Violation" OR "Telnet Enforcement Violation" OR "TFTP Enforcement Violation" OR "Trend Micro ServerProtect Protection Violation" OR "Veritas Backup Exec Protection Violation" OR "Application Servers Protection Violation" OR "MySQL Protection Violation" OR "Microsoft Windows Operating System" OR "WordPress Enforcement Protection" OR "HTTP Protocol Inspection" OR "RIP Enforcement Violation" OR "SUN-RPC Enforcement Violation" OR "Microsoft Windows NT Null CIFS Sessions"))) OR ("Scanner Enforcement Violation" OR "Port Scan" OR "Novell NMAP Protocol Violation") OR ((severity IN (Medium, High, Critical) AND confidence_level IN (Medium, Medium-High, High)) AND ((product=IPS  AND ("Adobe Flash Protection Violation" OR "Adobe Shockwave Protection Violation" OR "Web Client Enforcement Violation")) OR (product=Anti-Virus AND ("URL Reputation" OR "DNS Reputation"))) NOT smtp)) AND product IN (Anti-Bot, Anti-Virus, Forensics, IPS, "Threat Emulation", "Threat Extraction", "Zero Phishing") AND protection_type=protection AND NOT confidence_level=N/A | dedup 1 loguid | eval Time=strftime(_time,"%m/%d/%y %H:%M:%S"), Source=src, Destination=dst, Blade=product, Action=action, "Protection Type"=protection_type, "Protection Name"=protection_name, Severity=severity, "Confidence Level"=confidence_level, Service=case(service==21,"ftp (TCP/21)",service==22,"ssh (TCP/22)",service==23,"telnet (TCP/23)",service==25,"smtp (TCP/25)",service==53 AND proto=6,"dns (TCP/53)",service==53 AND proto=17,"dns (UDP/53)",service==67,"dhcp (UDP/67)",service==68,"dhcp (UDP/68)",service==69,"tftp (UDP/69)",service==80,"http (TCP/80)",service==110,"pop3 (TCP/110)",service==119,"nntp (TCP/119)",service==123 AND proto=6,"ntp (TCP/123)",service==123 AND proto=17,"ntp (UDP/123)",service==143,"imap (TCP/143)",service==389 AND proto=6,"ldap (TCP/389)",service==389 AND proto=17,"ldap (UDP/389)",service==443,"https (TCP/443)",service==993,"imap (TCP/993)",service==1812,"radius (UDP/1812)",service==5190 AND proto=6,"aol (TCP/5190)",service==5190 AND proto=17,"aol (UDP/5190)") | table Time, Source, Destination, Blade, Action, "Protection Type", "Protection Name", Severity, "Confidence Level", Service</query>
+          <earliest>$access_view_time_picker.earliest$</earliest>
+          <latest>$access_view_time_picker.latest$</latest>
+        </search>
+        <option name="count">20</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+</form>
