@@ -1,0 +1,40 @@
+#first_row_left_col {
+	width: 20% !important;
+}
+
+#first_row_right_col{
+    width: 80% !important;
+}
+
+.panel-title{
+    font-weight:600 !important;
+}
+
+.dashboard-row .dashboard-panel .panel-body {
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.table th, .table td {
+    text-align: left !important;
+    min-width: 70px !important;
+}
+
+#first_row_right_col .dashboard-element-title, #first_row_left_col .dashboard-element-title{
+    text-align: center;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 0px;
+}
+
+.dashboard-row .dashboard-panel .panel-element-row div.single{
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.splunk-paginator{
+    margin-top: 15px;
+    margin-left: auto;
+    margin-right: auto;
+}

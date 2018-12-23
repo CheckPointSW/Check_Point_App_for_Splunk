@@ -1,0 +1,30 @@
+.panel-title{
+    font-weight:600 !important;
+}
+
+.dashboard-row .dashboard-panel .panel-body {
+    margin-left: 5px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+#indicators_panel .dashboard-element-title{
+    text-align: center;
+    padding: 5px !important;
+}
+
+.table th, .table td {
+    text-align: left !important;
+    min-width: 70px !important;
+}
+
+.dashboard-row .dashboard-panel .panel-element-row div.single{
+    padding-bottom: 10px;
+padding-top: 10px;
+}
+
+.splunk-paginator{
+    margin-top:15px;
+    margin-left: auto;
+    margin-right: auto;
+}

@@ -1,0 +1,16 @@
+.table{
+margin: auto !important;
+    min-width: 98% !important;
+    max-width: 98% !important;
+}
+
+.table th, .table td{
+    text-align: left !important;
+    min-width: 70px;
+    max-width: 150px;
+    word-wrap: break-word;
+}
+
+.panel-title{
+    font-weight:600 !important;
+}
